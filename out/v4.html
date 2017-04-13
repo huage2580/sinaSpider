@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <script data-require="d3@4.0.0" data-semver="4.0.0" src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+
+<body>
+  
+	<canvas width="1200" height="700"></canvas>
+	<script src="nodes.js" charset="utf-8"></script>
+	<script src="edges.js" charset="utf-8"></script>
+<script>
+	var radius=10;
+    var width = 1200,
+        height = 700,
+        canvas = document.querySelector("canvas"),
+        context = canvas.getContext("2d");
+    var trans = d3.zoomIdentity;
+	var color = d3.scaleOrdinal(d3.schemeCategory10);
+	var arr = ['','#ff5722','#FF9800','#4caf50','#03a9f4','#9c27b0'];
+    canvas2 = d3.select(canvas);
+  
+    var force = d3.forceSimulation()
+      .force("link", d3.forceLink()
+					.id(function(d, i) {
+						return d.uid;
+					}).distance(20*radius)
+					)
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    force.nodes(nodes)
+      .on("tick", ticked);
+      
+    force.force("link")
+      .links(edges);
+	
+	canvas2.call(d3.drag()
+            .container(canvas)
+            .subject(dragsubject)
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+					
+	function dragsubject() {
+		return force.find(d3.event.x-trans.x, d3.event.y-trans.y,radius);
+    }
+	function dragstarted() {
+		d3.event.sourceEvent.stopPropagation();
+		if (!d3.event.active) force.alphaTarget(0.1).restart();
+		d3.event.subject.fx = d3.event.subject.x;
+		d3.event.subject.fy = d3.event.subject.y;
+	}
+	function dragged() {
+		d3.event.subject.fx = d3.event.x;
+		d3.event.subject.fy = d3.event.y;
+	}
+	function dragended() {
+		if (!d3.event.active) force.alphaTarget(0);
+		d3.event.subject.fx = null;
+		d3.event.subject.fy = null;
+	}
+
+	
+      
+    
+    function ticked() {
+      context.save();
+      context.clearRect(0, 0, width, height);
+      context.translate(trans.x, trans.y);
+      context.scale(trans.k, trans.k);//我特么不缩放了
+
+      // Draw the links
+      edges.forEach(function(d) {
+        // Draw a line from source to target.
+        context.beginPath();
+		context.strokeStyle="#666666";
+        context.moveTo(d.source.x, d.source.y);
+        context.lineTo(d.target.x, d.target.y);
+        context.stroke();
+      });
+      // Draw the nodes and text
+      nodes.forEach(function(d, i) {
+        // Draws a complete arc for each node.
+		context.fillStyle=arr[d.lv];
+        context.beginPath();
+		context.arc(d.x, d.y, radius, 0, 2 * Math.PI, true);
+        context.fill();
+		context.fillStyle="#666666";
+		context.font = "15px Courier New";
+		context.fillText(d.name, d.x+radius+2, d.y+radius/2);
+      });
+      
+      context.restore();
+    };
+
+    // now the zooming part
+    canvas2.call(d3.zoom().scaleExtent([0.001, 1]).on("zoom", zoomed))
+
+    function zoomed(d) {
+      trans = d3.event.transform;
+      ticked();
+    }
+  </script>
+</body>
+
+</html>
